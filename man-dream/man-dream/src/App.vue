@@ -1,15 +1,16 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="page">
+    <UploadImage msg="Welcome to Your Vue.js App"/>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import UploadImage from './components/UploadImage.vue'
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
+    UploadImage
   },
 }
 </script>
@@ -22,5 +23,11 @@ export default {
   text-align: center;
   color: #2c3e50;
   margin-top: 60px;
+}
+
+.page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 </style>
