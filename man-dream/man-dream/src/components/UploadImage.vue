@@ -4,31 +4,55 @@
     accept="image/png, image/jpeg"
     placeholder="Click to upload file"
     type="file" @change="onUploadFile"
+    ref="input"
     :disabled="isProcessing"
     />
-    <div class="row">
+    <div 
+    class="upload-container"
+    @dragleave.prevent="() => {}"
+    @dragover.prevent="() => {}"
+    @drop.prevent="!isProcessing ? onUploadFile($event) : null"
+    dropzone="true"
+    >
+      <img :src="file ?? require('@/assets/image-icon.png')" alt="image icon" class="upload-image-icon" />
+      <p class="upload-image-text">Drop your image here, or <span 
+      @click="clickToUpload"
+      class="upload-image-link"
+      :class="{'default-pointer': isProcessing}"
+      >Browse</span></p>
+    </div>
+
+    <div class="progress-bar">
+      <div 
+      :style="{
+        width: `${processPercent}%`
+      }"
+      class="running-bar"></div>
+    </div>
+
+    <div 
+    v-if="processedImage">
       <img 
-      v-if="file"
-      :src="file" alt="upload image"
-      class="image"
-      >
-      <div class="space"></div>
-      <img v-if="processedImage" 
       :src="processedImage"
       alt="processed Image"
       class="image"
       />
+
+      <p 
+      @click="download"
+      class="upload-image-link">Download Image !</p>
     </div>  
   </div>
 </template>
 
 <script>
+
 import { defineComponent } from "@vue/runtime-core"
 import { ref, watch } from "vue";
-import * as FirebaseStorage from "firebase/storage";
 import * as FirebaseDatabase from "firebase/database";
-import { getStorage,  uploadBytesResumable, getDownloadURL } from "firebase/storage";
-import { getDatabase, set, push, child, onValue } from "firebase/database";
+import { getDatabase, onValue } from "firebase/database";
+
+import Helper from '../lib/helpers';
 
 export default defineComponent({
   name: 'UploadImage',
@@ -37,83 +61,59 @@ export default defineComponent({
     const processedImage = ref(null);
     const isProcessing = ref(false);
 
-    const storage = getStorage();
     const database = getDatabase();
 
     const postKey = ref("");
 
+    const processPercent = ref(0);
+
+    const {
+      uploadToStorage,
+      writeToDatabase
+    } = Helper();
 
 
     const onUploadFile = (e) => {
-     const uploadFile = e.target.files[0];
-     file.value = URL.createObjectURL(uploadFile);
-     processFile(uploadFile);
+      const files = e.target.files ||  e.dataTransfer.files;
+      const uploadFile = files[0];
+      file.value = URL.createObjectURL(uploadFile);
+      processFile(uploadFile);
     }
-
     const processFile = async (file) => {
       try {
         isProcessing.value = true;
 
         const filePath = `/unnude/${Date.now()}-${file.name}`;
-        const uploadUnprocessImageRef = FirebaseStorage.ref(storage,`${filePath}${file.name}`);
-        const uploadTask = uploadBytesResumable(uploadUnprocessImageRef, file);
-
-
-        uploadTask.on('state_changed', 
-          (snapshot) => {
-            const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-            console.log('Upload is ' + progress + '% done');
-            switch (snapshot.state) {
-              case 'paused':
-                console.log('Upload is paused');
-                break;
-              case 'running':
-                console.log('Upload is running');
-                break;
-            }
-          }, 
-          (error) => {
-            throw new Error(error);
-          }, 
-          () => {
-            getDownloadURL(uploadTask.snapshot.ref).then((downloadURL) => {
-              writeToRealtimeDb({
-                ewbn_id: 1,
-                image_url: downloadURL,
-                process_Flag: false,
-                user_token: '1'
-              })
-            });
-          }
-        );
+        const imageUrl = await uploadToStorage(filePath, file);
+        console.log(imageUrl);
+        postKey.value = await writeToDatabase({
+          created_time: new Date().toLocaleString(),
+          image_url: imageUrl,
+          process_Flag: false,
+          file_name: file.name
+        })
       }
       catch(e) {
         console.log(e);
       }
-      finally {
-        isProcessing.value = false;
-      }
     }
-
-    const writeToRealtimeDb = ({ewbn_id, image_url, process_Flag, user_token}) => {
-      const newPostKey = push(child(FirebaseDatabase.ref(database), 'wanna_nude_queue')).key;
-      postKey.value = newPostKey;
-      set(
-      FirebaseDatabase.ref(database,'/wanna_nude_queue/'+ newPostKey), 
-      JSON.parse(JSON.stringify({
-        ewbn_id: ewbn_id,
-        image_url: image_url,
-        process_Flag: process_Flag,
-        user_token: user_token
-      })));
-    };
-
     const beginWatchImage = (id) => {
       processedImage.value = null;
+      processPercent.value = 0;
+      const runningProcess = setInterval(() => {
+        processPercent.value = processPercent.value + 1.65;
+        if(processPercent.value >= 98) clearInterval(runningProcess);
+      },1000);
+
       const imageRef = FirebaseDatabase.ref(database,'wanna_nude_queue/'+id);
       onValue(imageRef, (snapshot) => {
         const data = snapshot.val();
-        if(String(data.process_Flag) == 'true') processedImage.value=data.image_url;
+        if(String(data.process_Flag) == 'true'){
+          isProcessing.value = false;
+          if(runningProcess) clearInterval(runningProcess);
+          processPercent.value = 100;
+          processedImage.value=data.image_url;
+        }
       })
     };
 
@@ -124,13 +124,24 @@ export default defineComponent({
       }
     );
 
-
-
     return {
       file,
       onUploadFile,
       isProcessing,
-      processedImage
+      processedImage,
+      processPercent
+    }
+  },
+  methods: {
+    clickToUpload() {
+      this.$refs.input.click();
+    },
+    download() {
+      const downloadLink = document.createElement("a");
+      downloadLink.href=`${this.processedImage}`;
+      downloadLink.target="_blank";
+      downloadLink.download = this.file.name;
+      downloadLink.click();
     }
   }
 });
@@ -141,51 +152,77 @@ export default defineComponent({
 
 .white-container {
   width: 800px;
-  height: 600px;
+  height: 800px;
 
-  border-radius: 8px;
-  background-color: blanchedalmond;
+  padding: 20px;
+  border-radius: 16px;
+  background-color: white;
 
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
 }
 
-.row {
+.upload-container {
+  width: 80%;
+
+  height: 400px;
+
   display: flex;
-  flex-direction: row;
-  justify-content: space-between;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px dashed #95a8c0;
+  border-radius: 10px;
 }
 
-.space {
-  width: 10px;
+.upload-image-icon {
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgba(85,85,85,0.1);
+}
+
+.upload-image-text {
+  font-weight: 500;
+  font-size: 16px;
+
+}
+
+.upload-image-link {
+  font-weight: bold;
+  color: rgb(135, 135, 245);
+  cursor: pointer;
+}
+
+.default-pointer {
+  cursor: default;
+}
+
+.progress-bar {
+  height: 10px;
+  width: 100%;
+  border: 1px solid blue;
+  border-radius: 4px;
+  margin-top: 30px;
+}
+
+.running-bar{
+  background-color: red;
+  height: 100%;
 }
 
 input {
   font-size: 24px;
+
+  display: none;
 }
 
 .image {
-  width: 400px;
-  height: 400px;
-}
-
-
-
-
-h3 {
-  margin: 40px 0 0;
-}
-ul {
-  list-style-type: none;
-  padding: 0;
-}
-li {
-  display: inline-block;
-  margin: 0 10px;
-}
-a {
-  color: #42b983;
+  margin-top: 10px;
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgba(85,85,85,0.1);
 }
 </style>
