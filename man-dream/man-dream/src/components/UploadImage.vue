@@ -1,26 +1,53 @@
 <template>
   <div class="white-container">
-    <input 
-    accept="image/png, image/jpeg"
-    placeholder="Click to upload file"
-    type="file" @change="onUploadFile"
-    ref="input"
-    :disabled="isProcessing"
-    />
-    <div 
-    class="upload-container"
-    @dragleave.prevent="() => {}"
-    @dragover.prevent="() => {}"
-    @drop.prevent="!isProcessing ? onUploadFile($event) : null"
-    dropzone="true"
-    >
-      <img :src="file ?? require('@/assets/image-icon.png')" alt="image icon" class="upload-image-icon" />
-      <p class="upload-image-text">Drop your image here, or <span 
-      @click="clickToUpload"
-      class="upload-image-link"
+   
+      <input 
+      accept="image/png, image/jpeg"
+      placeholder="Click to upload file"
+      type="file" @change="onUploadFile"
+      ref="input"
+      :disabled="isProcessing"
+      />
+      <div 
+      class="upload-container"
+      @dragleave.prevent="() => {}"
+      @dragover.prevent="() => {}"
+      @drop.prevent="!isProcessing ? onUploadFile($event) : null"
+      dropzone="true"
+      >
+        <vue-picture-cropper
+          :boxStyle="{
+            width: '80%',
+            height: '80%',
+            backgroundColor: '#f8f8f8',
+            margin: 'auto'
+          }"
+          :img="file"
+          :options="{
+            viewMode: 1,
+            dragMode: 'crop',
+            aspectRatio: 1 / 1,
+            preview: file,
+            cropBoxResizable: true,
+          }"
+          class="upload-image-icon"
+        />
+        <p class="upload-image-text">Drop your image here, or <span 
+        @click="clickToUpload"
+        class="upload-image-link"
+        :class="{'default-pointer': isProcessing}"
+        >Browse</span></p>
+      </div>
+
+      <div 
+      @click="!isProcessing ? uploadToServer() : null"
       :class="{'default-pointer': isProcessing}"
-      >Browse</span></p>
-    </div>
+      class="submit-btn">
+        Upload
+      </div>
+
+    
+
 
     <div class="progress-bar">
       <div 
@@ -29,6 +56,9 @@
       }"
       class="running-bar"></div>
     </div>
+    
+
+
 
     <div 
     v-if="processedImage">
@@ -51,11 +81,18 @@ import { defineComponent } from "@vue/runtime-core"
 import { ref, watch } from "vue";
 import * as FirebaseDatabase from "firebase/database";
 import { getDatabase, onValue } from "firebase/database";
+import VuePictureCropper, { cropper } from 'vue-picture-cropper'
+
+
+
 
 import Helper from '../lib/helpers';
 
 export default defineComponent({
   name: 'UploadImage',
+  components: {
+    VuePictureCropper,
+  },
   setup() {
     const file = ref(null);
     const processedImage = ref(null);
@@ -64,7 +101,6 @@ export default defineComponent({
     const database = getDatabase();
 
     const postKey = ref("");
-
     const processPercent = ref(0);
 
     const {
@@ -77,7 +113,12 @@ export default defineComponent({
       const files = e.target.files ||  e.dataTransfer.files;
       const uploadFile = files[0];
       file.value = URL.createObjectURL(uploadFile);
-      processFile(uploadFile);
+    }
+
+    const uploadToServer = async () => {
+      const file = await cropper.getFile();
+
+      processFile(file)
     }
     const processFile = async (file) => {
       try {
@@ -85,7 +126,7 @@ export default defineComponent({
 
         const filePath = `/unnude/${Date.now()}-${file.name}`;
         const imageUrl = await uploadToStorage(filePath, file);
-        console.log(imageUrl);
+        // console.log(imageUrl);
         postKey.value = await writeToDatabase({
           created_time: new Date().toLocaleString(),
           image_url: imageUrl,
@@ -117,6 +158,11 @@ export default defineComponent({
       })
     };
 
+    const log = (e) => console.log(e); 
+
+
+   
+
     watch(
       () => postKey.value,
       (val) => {
@@ -129,7 +175,11 @@ export default defineComponent({
       onUploadFile,
       isProcessing,
       processedImage,
-      processPercent
+      processPercent,
+      uploadToServer,
+      log,
+
+
     }
   },
   methods: {
@@ -152,7 +202,7 @@ export default defineComponent({
 
 .white-container {
   width: 800px;
-  height: 800px;
+  height: 850px;
 
   padding: 20px;
   border-radius: 16px;
@@ -196,6 +246,22 @@ export default defineComponent({
   cursor: pointer;
 }
 
+.submit-btn {
+
+  margin-top: 10px;
+  width: 250px;
+  height: 40px;
+  background-color: #d67ad9;
+  border-radius: 4px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
 .default-pointer {
   cursor: default;
 }
@@ -205,7 +271,7 @@ export default defineComponent({
   width: 100%;
   border: 1px solid blue;
   border-radius: 4px;
-  margin-top: 30px;
+  margin-top: 10px;
 }
 
 .running-bar{
