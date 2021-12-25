@@ -1,77 +1,77 @@
 <template>
-  <div class="white-container">
-   
-      <input 
-      accept="image/png, image/jpeg"
-      placeholder="Click to upload file"
-      type="file" @change="onUploadFile"
-      ref="input"
-      :disabled="isProcessing"
-      />
-      <div 
-      class="upload-container"
-      @dragleave.prevent="() => {}"
-      @dragover.prevent="() => {}"
-      @drop.prevent="!isProcessing ? onUploadFile($event) : null"
-      dropzone="true"
-      >
-        <vue-picture-cropper
-          :boxStyle="{
-            width: '80%',
-            height: '80%',
-            backgroundColor: '#f8f8f8',
-            margin: 'auto'
-          }"
-          :img="file"
-          :options="{
-            viewMode: 1,
-            dragMode: 'crop',
-            aspectRatio: 1 / 1,
-            preview: file,
-            cropBoxResizable: true,
-          }"
-          class="upload-image-icon"
+  <div class="white-container w-full">
+    
+      <div class="w-full h-max lg:h-3/4 flex flex-col lg:flex-row
+      
+      ">
+        <input 
+        accept="image/png, image/jpeg"
+        placeholder="Click to upload file"
+        type="file" @change="onUploadFile"
+        ref="input"
+        :disabled="isProcessing"
         />
-        <p class="upload-image-text">Drop your image here, or <span 
-        @click="clickToUpload"
-        class="upload-image-link"
-        :class="{'default-pointer': isProcessing}"
-        >Browse</span></p>
+        <div 
+        class="upload-container h-full"
+        @dragleave.prevent="() => {}"
+        @dragover.prevent="() => {}"
+        @drop.prevent="!isProcessing ? onUploadFile($event) : null"
+        dropzone="true"
+        >
+          <vue-picture-cropper
+            :boxStyle="{
+              width: '80%',
+              height: '80%',
+              backgroundColor: '#f8f8f8',
+              margin: 'auto'
+            }"
+            :img="file"
+            :options="{
+              viewMode: 1,
+              dragMode: 'crop',
+              aspectRatio: 1 / 1,
+              preview: file,
+              cropBoxResizable: true,
+            }"
+            class="upload-image-icon"
+          />
+          <p class="upload-image-text">Drop your image here, or <span 
+          @click="clickToUpload"
+          class="upload-image-link"
+          :class="{'default-pointer': isProcessing}"
+          >Browse</span></p>
+        </div>
+
+
+        <div 
+        class="w-full lg:w-2/4 flex flex-col justify-around items-center"
+        v-if="processedImage">
+          <img 
+          :src="processedImage"
+          alt="processed Image"
+          class="image"
+          />
+
+
+          <DownloadButton 
+          class="lg:mt-0 mt-2"
+          :text="'Download'" @onClick="download" />
+        </div>  
       </div>
+     
 
-      <div 
-      @click="!isProcessing ? uploadToServer() : null"
-      :class="{'default-pointer': isProcessing}"
-      class="submit-btn">
-        Upload
+      <div class="w-full">
+        <UploadButton 
+        class="mt-3"
+        :isLoading="isProcessing" :text="'Take a dream'" @onClick="uploadToServer" /> 
+        <ProgressBar 
+          class="w-full"
+          :taskName="'Loading'"
+          :percentage="processPercent"
+        />
       </div>
+      
 
-    
-
-
-    <div class="progress-bar">
-      <div 
-      :style="{
-        width: `${processPercent}%`
-      }"
-      class="running-bar"></div>
-    </div>
-    
-
-
-
-    <div 
-    v-if="processedImage">
-      <img 
-      :src="processedImage"
-      alt="processed Image"
-      class="image"
-      />
-
-      <p 
-      @click="download"
-      class="upload-image-link">Download Image !</p>
-    </div>  
   </div>
 </template>
 
@@ -84,14 +84,19 @@ import { getDatabase, onValue } from "firebase/database";
 import VuePictureCropper, { cropper } from 'vue-picture-cropper'
 
 
-
+import ProgressBar from "@/components/ProgressBar.vue";
 
 import Helper from '../lib/helpers';
+import UploadButton from "./UploadButton.vue";
+import DownloadButton from "./DownloadButton.vue";
 
 export default defineComponent({
   name: 'UploadImage',
   components: {
     VuePictureCropper,
+    ProgressBar,
+    UploadButton,
+    DownloadButton,
   },
   setup() {
     const file = ref(null);
@@ -201,7 +206,7 @@ export default defineComponent({
 <style scoped>
 
 .white-container {
-  width: 800px;
+  width: calc(100% - 100px);
   height: 850px;
 
   padding: 20px;
@@ -214,10 +219,11 @@ export default defineComponent({
   align-items: center;
 }
 
-.upload-container {
-  width: 80%;
+  
 
-  height: 400px;
+.upload-container {
+  width: 50%;
+  height: 100%;
 
   display: flex;
   flex-direction: column;
@@ -226,6 +232,22 @@ export default defineComponent({
 
   border: 1px dashed #95a8c0;
   border-radius: 10px;
+
+
+}
+
+@media (min-width: 330px) and (max-width: 960px) {
+  .upload-container {
+    height: 300px;
+    width: 100%;
+  }
+
+  .white-container {
+    width: 100%;
+    padding: 10px;
+    height: 100%;
+    justify-content: space-between;
+  }
 }
 
 .upload-image-icon {
@@ -246,49 +268,20 @@ export default defineComponent({
   cursor: pointer;
 }
 
-.submit-btn {
-
-  margin-top: 10px;
-  width: 250px;
-  height: 40px;
-  background-color: #d67ad9;
-  border-radius: 4px;
-  color: white;
-  font-weight: bold;
-  cursor: pointer;
-
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
 .default-pointer {
   cursor: default;
 }
 
-.progress-bar {
-  height: 10px;
-  width: 100%;
-  border: 1px solid blue;
-  border-radius: 4px;
-  margin-top: 10px;
-}
-
-.running-bar{
-  background-color: red;
-  height: 100%;
-}
 
 input {
-  font-size: 24px;
-
   display: none;
 }
 
 .image {
   margin-top: 10px;
-  width: 300px;
-  height: 300px;
+  width: 80%;
+  height: 80%;
   border: 1px solid rgba(85,85,85,0.1);
 }
 </style>
