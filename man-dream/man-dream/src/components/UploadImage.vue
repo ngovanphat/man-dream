@@ -63,7 +63,10 @@
       <div class="w-full">
         <UploadButton 
         class="mt-3"
-        :isLoading="isProcessing" :text="'Take a dream'" @onClick="uploadToServer" /> 
+        :isLoading="isProcessing" 
+        :disabled="!file"
+        :text="'Take a dream'" 
+        @onClick="uploadToServer" /> 
         <ProgressBar 
           class="w-full"
           :taskName="'Loading'"

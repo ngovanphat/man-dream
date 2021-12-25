@@ -8,7 +8,7 @@
         </div>
         <div class="text-right">
         <span class="text-xs font-semibold inline-block text-pink-600">
-            {{percentage}}%
+            {{Math.round(percentage)}}%
         </span>
         </div>
     </div>
