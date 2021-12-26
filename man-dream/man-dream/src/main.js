@@ -20,9 +20,18 @@ const firebaseConfig = {
   measurementId: "G-P2CYG14E90"
 };
 
+
+import Toast,{ POSITION }  from "vue-toastification";
+// Import the CSS or use your own!
+import "vue-toastification/dist/index.css";
+
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const analytics = getAnalytics(app);
 console.log(analytics);
+const options = {
+    // You can set your default options here
+    position: POSITION.TOP_CENTER
+};
+createApp(App).use(Toast, options).mount('#app');
 
-createApp(App).mount('#app')

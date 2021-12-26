@@ -1,11 +1,12 @@
 <template>
   <div class="page">
-    <UploadImage msg="Welcome to Your Vue.js App"/>
+    <UploadImage />
   </div>
 </template>
 
 <script>
-import UploadImage from './components/UploadImage.vue'
+import UploadImage from './components/UploadImage.vue';
+
 
 export default {
   name: 'App',

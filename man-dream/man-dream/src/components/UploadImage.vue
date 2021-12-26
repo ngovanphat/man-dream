@@ -1,9 +1,9 @@
 <template>
   <div class="white-container w-full">
-    
-      <div class="w-full h-max lg:h-3/4 flex flex-col lg:flex-row
-      
-      ">
+
+      <SearchBar @onGetImage="onGetImage"/>
+
+      <div class="w-full h-max lg:h-3/4 flex flex-col lg:flex-row justify-center">
         <input 
         accept="image/png, image/jpeg"
         placeholder="Click to upload file"
@@ -29,13 +29,12 @@
             :options="{
               viewMode: 1,
               dragMode: 'crop',
-              aspectRatio: 1 / 1,
               preview: file,
               cropBoxResizable: true,
             }"
             class="upload-image-icon"
           />
-          <p class="upload-image-text">Drop your image here, or <span 
+          <p class="upload-image-text mb-1">Drop your image here, or <span 
           @click="clickToUpload"
           class="upload-image-link"
           :class="{'default-pointer': isProcessing}"
@@ -55,18 +54,22 @@
 
           <DownloadButton 
           class="lg:mt-0 mt-2"
-          :text="'Download'" @onClick="download" />
+          :text="'Download'" @onClick="download()" />
         </div>  
       </div>
      
 
-      <div class="w-full">
-        <UploadButton 
-        class="mt-3"
-        :isLoading="isProcessing" 
-        :disabled="!file"
-        :text="'Take a dream'" 
-        @onClick="uploadToServer" /> 
+      <div class="w-full flex justify-center flex-col">
+        <div class="flex flex-col justify-center items-center mt-1">
+          <UploadButton 
+          class="mt-3 lg:w-1/4"
+          :isLoading="isProcessing" 
+          :disabled="!file"
+          :text="'Take a dream'" 
+          @onClick="uploadToServer" /> 
+        </div>  
+        
+
         <ProgressBar 
           class="w-full"
           :taskName="'Loading'"
@@ -88,7 +91,7 @@ import VuePictureCropper, { cropper } from 'vue-picture-cropper'
 
 
 import ProgressBar from "@/components/ProgressBar.vue";
-
+import SearchBar from "@/components/SearchBar.vue";
 import Helper from '../lib/helpers';
 import UploadButton from "./UploadButton.vue";
 import DownloadButton from "./DownloadButton.vue";
@@ -98,6 +101,7 @@ export default defineComponent({
   components: {
     VuePictureCropper,
     ProgressBar,
+    SearchBar,
     UploadButton,
     DownloadButton,
   },
@@ -116,6 +120,10 @@ export default defineComponent({
       writeToDatabase
     } = Helper();
 
+    const onGetImage = (payload) => {
+      file.value = payload;
+    }
+   
 
     const onUploadFile = (e) => {
       const files = e.target.files ||  e.dataTransfer.files;
@@ -125,7 +133,6 @@ export default defineComponent({
 
     const uploadToServer = async () => {
       const file = await cropper.getFile();
-
       processFile(file)
     }
     const processFile = async (file) => {
@@ -186,7 +193,7 @@ export default defineComponent({
       processPercent,
       uploadToServer,
       log,
-
+      onGetImage
 
     }
   },
@@ -285,6 +292,9 @@ input {
   margin-top: 10px;
   width: 80%;
   height: 80%;
+  max-width: 384px;
+  max-height: 384px;
+  aspect-ratio: 1;
   border: 1px solid rgba(85,85,85,0.1);
 }
 </style>
