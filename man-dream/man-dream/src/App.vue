@@ -26,14 +26,24 @@ export default {
   
   background-color: #DAEAFD;
 
-  height: 100vh;
+  min-height: 100vh;
 }
+
+
+
 
 .page {
   display: flex;
   justify-content: center;
   align-items: center;
 
+  padding: 30px 0;
   height: 100%;
+}
+
+@media (min-width: 330px) and (max-width: 960px) {
+  .page {
+    padding: 20px 10px;
+  } 
 }
 </style>

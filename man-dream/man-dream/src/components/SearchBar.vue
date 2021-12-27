@@ -48,13 +48,15 @@ export default defineComponent({
                 const image = await fetch(imageUrl.value);
                 const blob = await image.blob();
                 const base64 = await blobToBase64(blob);
-             
                 emit('onGetImage', base64);
             }
             catch(e) {
                 toast.error(e.toString(), {
                     timeout: 2000
                 });
+            }
+            finally {
+                imageUrl.value = ""
             }
         }
 

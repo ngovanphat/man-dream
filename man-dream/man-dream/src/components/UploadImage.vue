@@ -3,7 +3,7 @@
 
       <SearchBar @onGetImage="onGetImage"/>
 
-      <div class="w-full h-max lg:h-3/4 flex flex-col lg:flex-row justify-center">
+      <div class="w-full h-max lg:h-1/2 flex flex-col lg:flex-row justify-center">
         <input 
         accept="image/png, image/jpeg"
         placeholder="Click to upload file"
@@ -31,6 +31,7 @@
               dragMode: 'crop',
               preview: file,
               cropBoxResizable: true,
+              aspectRatio: 1
             }"
             class="upload-image-icon"
           />
@@ -43,18 +44,27 @@
 
 
         <div 
-        class="w-full lg:w-2/4 flex flex-col justify-around items-center"
-        v-if="processedImage">
-          <img 
-          :src="processedImage"
-          alt="processed Image"
-          class="image"
-          />
+        class="w-full lg:w-2/4"
+        v-if="processedImages.length !== 0">
+          <carousel>
+              <slide v-for="(image, index) in processedImages" :key="index">
+                <div class="flex flex-col justify-around lg:gap-1 items-center">
+                  <img 
+                    :src="image"
+                    alt="processed Image"
+                    class="image"
+                    />
+                  <DownloadButton 
+                  class="lg:mt-0 mt-2"
+                  :text="'Download'" @onClick="download(image)" />
+                </div>
+               
+              </slide>
 
-
-          <DownloadButton 
-          class="lg:mt-0 mt-2"
-          :text="'Download'" @onClick="download()" />
+            <template #addons>
+              <pagination />
+            </template>
+          </carousel>
         </div>  
       </div>
      
@@ -87,8 +97,11 @@ import { defineComponent } from "@vue/runtime-core"
 import { ref, watch } from "vue";
 import * as FirebaseDatabase from "firebase/database";
 import { getDatabase, onValue } from "firebase/database";
+
 import VuePictureCropper, { cropper } from 'vue-picture-cropper'
 
+import 'vue3-carousel/dist/carousel.css';
+import { Carousel, Slide, Pagination } from 'vue3-carousel';
 
 import ProgressBar from "@/components/ProgressBar.vue";
 import SearchBar from "@/components/SearchBar.vue";
@@ -104,10 +117,13 @@ export default defineComponent({
     SearchBar,
     UploadButton,
     DownloadButton,
+    Carousel,
+    Slide,
+    Pagination,
   },
   setup() {
     const file = ref(null);
-    const processedImage = ref(null);
+    const processedImages = ref([]);
     const isProcessing = ref(false);
 
     const database = getDatabase();
@@ -154,11 +170,10 @@ export default defineComponent({
       }
     }
     const beginWatchImage = (id) => {
-      processedImage.value = null;
       processPercent.value = 0;
       const runningProcess = setInterval(() => {
-        processPercent.value = processPercent.value + 1.65;
-        if(processPercent.value >= 98) clearInterval(runningProcess);
+        processPercent.value = processPercent.value + 10;
+        if(processPercent.value >= 85) clearInterval(runningProcess);
       },1000);
 
       const imageRef = FirebaseDatabase.ref(database,'wanna_nude_queue/'+id);
@@ -168,7 +183,7 @@ export default defineComponent({
           isProcessing.value = false;
           if(runningProcess) clearInterval(runningProcess);
           processPercent.value = 100;
-          processedImage.value=data.image_url;
+          processedImages.value.unshift(data.image_url);
         }
       })
     };
@@ -189,7 +204,7 @@ export default defineComponent({
       file,
       onUploadFile,
       isProcessing,
-      processedImage,
+      processedImages,
       processPercent,
       uploadToServer,
       log,
@@ -201,11 +216,11 @@ export default defineComponent({
     clickToUpload() {
       this.$refs.input.click();
     },
-    download() {
+    download(url) {
       const downloadLink = document.createElement("a");
-      downloadLink.href=`${this.processedImage}`;
+      downloadLink.href=`${url}`;
       downloadLink.target="_blank";
-      downloadLink.download = this.file.name;
+      downloadLink.download = Date.now().toString();
       downloadLink.click();
     }
   }
@@ -217,7 +232,7 @@ export default defineComponent({
 
 .white-container {
   width: calc(100% - 100px);
-  height: 850px;
+  height: 650px;
 
   padding: 20px;
   border-radius: 16px;
@@ -225,7 +240,7 @@ export default defineComponent({
 
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: space-between;
   align-items: center;
 }
 
@@ -290,10 +305,8 @@ input {
 
 .image {
   margin-top: 10px;
-  width: 80%;
-  height: 80%;
-  max-width: 384px;
-  max-height: 384px;
+  max-width: 256px;
+  max-height: 256px;
   aspect-ratio: 1;
   border: 1px solid rgba(85,85,85,0.1);
 }
